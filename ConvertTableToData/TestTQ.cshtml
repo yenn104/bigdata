@@ -1,0 +1,55 @@
+﻿@model IEnumerable<TonKhoModel>
+@{
+  ViewData["Title"] = "Thống kê";
+  Layout = "~/Views/Shared/_LayoutNV.cshtml";
+  var results = ViewBag.Results;
+  var jsonData = @Html.Raw(Json.Serialize(ViewBag.Results));
+}
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Thống kê</title>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+  <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+</head>
+<body>
+
+  <py-config>
+    packages = ["matplotlib", "pandas"]
+  </py-config>
+
+  <py-script>
+
+    import pandas as pd
+    import matplotlib.pyplot as plt
+
+    data = @jsonData;
+
+    def plot(data):
+
+      plt.rcParams["figure.figsize"] = (12, 6)  # đổi kích thước biểu đồ
+      fig, ax = plt.subplots()
+      bars = ax.bar(data["tenHH"], data["sl"])  # đổi thành bar chart
+      labels = [f'{value:,.0f} VNĐ' for value in data['gia']]
+      ax.bar_label(bars, labels=labels)
+      #ax.bar_label(bars, labels=data["gia"])   hiển thị giá trị của các cột lên trên chúng
+
+      plt.title("Top 5 hàng hóa có trị giá tồn kho lớn nhất")
+      plt.xticks(rotation=25)
+
+      display(fig, target="graph-area", append=False)
+
+    data = pd.DataFrame(data)
+    plot(data)
+
+  </py-script>
+
+  <div id="graph-area"></div>
+
+
+ 
+</body>
+</html>

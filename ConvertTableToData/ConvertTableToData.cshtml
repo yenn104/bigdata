@@ -1,0 +1,151 @@
+﻿@{
+  Layout = "~/Views/Shared/_LayoutNV.cshtml";
+  var results = ViewBag.Results;
+}
+
+
+<div class="row row-cols-2">
+  <div class="col-lg-6 col-12">
+    <div class="mb-3">
+      <label for="exampleFormControlTextarea1" class="form-label">Table HTML</label>
+      <textarea id="textTable" class="form-control" rows="7"></textarea>
+      <div class="invalid-feedback">
+        Định dạng bảng sai HTML
+      </div>
+    </div>
+    <div class="mb-3">
+      <button class="btn btn-outline-primary" id="btnConvert">
+        Chuyển đổi
+      </button>
+    </div>
+  </div>
+  <div class="col-lg-6 col-12">
+    <div class="mb-3">
+      <label for="exampleFormControlTextarea1" class="form-label">Json Data</label>
+      <textarea id="textJson" class="form-control" rows="7"></textarea>
+    </div>
+    <div class="mb-3 d-flex justify-content-end">
+      <button id="btnDownloadExcel" class="btn btn-outline-success" style="margin-right: 10px;">
+        Excel
+      </button>
+      <button class="btn btn-outline-danger" id="btnDownloadJson">
+        Json
+      </button>
+    </div>
+  </div>
+  <div class="col-lg-12 col-12 table-responsive" style="height: 20rem; overflow-y: auto; ">
+    <table id="table2" class="table table-striped" style="width:100%">
+    </table>
+  </div>
+</div>
+
+
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<script>
+  $('#btnConvert').on('click', function () {
+    try {
+      var parser = new DOMParser();
+
+      var doc = parser.parseFromString($('#textTable').val(), "text/html");
+      var table = doc.querySelector("table");
+      var data = [];
+      var headers = [];
+
+      // Lấy danh sách các tiêu đề từ hàng đầu tiên
+      var headerRow = table.querySelector("thead tr");
+      var headerCells = headerRow.querySelectorAll("th");
+      headerCells.forEach(function (cell) {
+        headers.push(cell.textContent);
+      });
+
+     
+
+      // Lấy dữ liệu từ từng hàng
+      var rows = table.querySelectorAll("tbody tr");
+      rows.forEach(function (row) {
+        var rowData = {};
+
+        var cells = row.querySelectorAll("th, td");
+        cells.forEach(function (cell, index) {
+          //rowData[headers[index]] = cell.textContent;
+          var cellContent = cell.textContent;
+          var cleanedContent = cellContent.replace(/<a\b[^>]*>(.*?)<\/a>/g, '').trim();
+          rowData[headers[index]] = cleanedContent;
+        });
+
+        data.push(rowData);
+      });
+
+      $('#textJson').val(JSON.stringify(data, null, 2));
+
+      var table = $('#table2');
+
+      // Tạo phần thead
+      var thead = $('<thead>');
+      var tr = $('<tr>');
+      $.each(data[0], function (key, value) {
+        tr.append($('<th>').text(key));
+      });
+      thead.append(tr);
+      table.append(thead);
+
+      // Điền dữ liệu vào tbody
+      var tbody = $('<tbody>');
+      $.each(data, function (index, item) {
+        var row = $('<tr>');
+        $.each(item, function (key, value) {
+          row.append($('<td>').text(value));
+        });
+        tbody.append(row);
+      });
+      table.append(tbody);
+
+      $('.invalid-feedback').hide();
+
+      var btnJson = document.getElementById('btnDownloadJson');
+      var btnExel = document.getElementById('btnDownloadExcel');
+      var json = JSON.stringify(data, null, 2);
+
+      btnJson.addEventListener('click', function () {
+
+        // Tạo một đối tượng Blob từ chuỗi JSON
+        var blob = new Blob([json], { type: "application/json" });
+
+        // Tạo đường dẫn URL từ đối tượng Blob
+        var url = URL.createObjectURL(blob);
+
+        // Tạo một thẻ a để tải xuống file
+        var link = document.createElement("a");
+        link.href = url;
+        link.download = "data.json";
+        link.click();
+
+        // Giải phóng đối tượng URL
+        URL.revokeObjectURL(url);
+      });
+
+      btnExel.addEventListener('click', function () {
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+
+        const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        // Tạo đường dẫn URL từ đối tượng Blob
+        var url = URL.createObjectURL(blob);
+
+        // Tạo một thẻ a để tải xuống file
+        var link = document.createElement("a");
+        link.href = url;
+        link.download = 'data.xlsx';
+        link.click();
+
+        // Giải phóng đối tượng URL
+        URL.revokeObjectURL(url);
+      });
+    } catch (error) {
+      $('.invalid-feedback').show();
+      console.log(error);
+    }
+  });
+</script>
